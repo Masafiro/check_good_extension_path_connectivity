@@ -1,0 +1,23 @@
+p,d,construction_time_sec,jacobian_count,vertex_count,edge_count,connectivity_check_time_sec,is_strongly_connected,scc_count,are_all_jacobians_connected_via_main_scc,are_all_jacobian_pairs_connected_via_good_paths,are_all_minor_sccs_size_1,are_all_minor_nodes_self_isogenies,all_minor_sccs_have_preds_from_main,any_minor_sccs_have_succs_to_main,exists_minor_to_minor_edge,condensed_graph,construction_peak_bytes,connectivity_check_peak_bytes
+7,3,0.0004,1,1,1,0.0000,true,1,true,true,true,true,true,false,false,0:[0],1896,749
+11,2,0.0010,2,4,7,0.0000,true,1,true,true,true,true,true,false,false,0:[0],3232,980
+13,2,0.0015,3,7,15,0.0000,true,1,true,true,true,true,true,false,false,0:[0],3496,1323
+17,3,0.0033,5,17,50,0.0000,true,1,true,true,true,true,true,false,false,0:[0],6712,2925
+19,2,0.0033,7,29,98,0.0000,true,1,true,true,true,true,true,false,false,0:[0],8072,4281
+23,5,0.0070,10,47,175,0.0000,true,1,true,true,true,true,true,false,false,0:[0],14288,6811
+29,2,0.0100,18,114,522,0.0000,true,1,true,true,true,true,true,false,false,0:[0],29952,17786
+31,3,0.0131,20,139,683,0.0000,true,1,true,true,true,true,true,false,false,0:[0],33408,22487
+37,2,0.0137,31,253,1405,0.0000,false,2,true,true,true,true,true,false,true,"0:[0, 1], 1:[1]",61608,39033
+41,3,0.0202,40,336,1888,0.0000,false,2,true,true,true,true,true,false,true,"0:[0, 1], 1:[1]",71280,57088
+43,2,0.0198,45,403,2367,0.0001,false,2,true,true,true,true,true,false,true,"0:[0, 1], 1:[1]",76760,64727
+47,5,0.0355,57,532,3291,0.0001,true,1,true,true,true,true,true,false,false,0:[0],89160,89740
+53,2,0.0452,78,783,5042,0.0001,true,1,true,true,true,true,true,false,false,0:[0],151216,128539
+59,2,0.0482,104,1057,6875,0.0002,false,3,true,true,true,true,true,false,true,"0:[0, 1, 2], 1:[], 2:[2]",173760,176357
+61,2,0.0663,113,1195,7947,0.0002,true,1,true,true,true,true,true,false,false,0:[0],188600,213519
+67,2,0.0717,145,1595,10926,0.0002,false,2,true,true,true,true,true,false,false,"0:[0, 1], 1:[]",304312,260575
+71,7,0.1497,170,1889,13024,0.0003,false,2,true,true,true,true,true,false,false,"0:[0, 1], 1:[]",328432,294933
+73,5,0.1011,183,2057,14211,0.0003,false,3,true,true,true,true,true,false,false,"0:[0, 1, 2], 1:[], 2:[]",342184,348501
+79,3,0.1233,228,2612,18312,0.0005,false,3,true,true,true,true,true,false,false,"0:[0, 1, 2], 1:[], 2:[]",394832,453588
+83,2,0.1235,260,3010,21188,0.0004,true,1,true,true,true,true,true,false,false,0:[0],570800,500538
+89,3,0.2192,316,3750,26841,0.0005,false,2,true,true,true,true,true,false,true,"0:[0, 1], 1:[1]",653872,588878
+97,5,0.2833,400,4865,35282,0.0007,false,4,true,true,true,true,true,false,false,"0:[0, 1, 2, 3], 1:[], 2:[], 3:[]",745088,852677

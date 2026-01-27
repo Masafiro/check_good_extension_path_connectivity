@@ -1,0 +1,15 @@
+p,d1,d2c0,d2c1,construction_time_sec,jacobian_count,vertex_count,edge_count,connectivity_check_time_sec,is_strongly_connected,scc_count,are_all_jacobians_connected_via_main_scc,are_all_jacobian_pairs_connected_via_good_paths,are_all_minor_sccs_size_1,are_all_minor_nodes_self_isogenies,all_minor_sccs_have_preds_from_main,any_minor_sccs_have_succs_to_main,exists_minor_to_minor_edge,condensed_graph,construction_peak_bytes,connectivity_check_peak_bytes
+7,3,1,1,0.1374,40,516,3659,0.0001,true,1,true,true,true,true,true,false,false,0:[0],93104,89316
+11,2,1,1,1.0991,605,8995,71410,0.0012,true,1,true,true,true,true,true,false,false,0:[0],1544464,1524575
+13,2,0,1,2.8738,1657,24797,198033,0.0035,true,1,true,true,true,true,true,false,false,0:[0],3654768,4129665
+17,3,0,1,19.3776,8324,124810,998193,0.0360,true,1,true,true,true,true,true,false,false,0:[0],21738640,19999394
+19,2,1,1,33.3391,16245,243623,1948616,0.0724,true,1,true,true,true,true,true,false,false,0:[0],42978000,39277747
+23,5,1,1,141.4917,51208,768092,6144609,0.3482,true,1,true,true,true,true,true,false,false,0:[0],114826992,129090588
+29,2,0,1,456.5163,206045,3090629,24724716,1.5474,true,1,true,true,true,true,true,false,false,0:[0]
+31,3,1,1,840.0469,307520,4612762,36901824,2.4894,true,1,true,true,true,true,true,false,false,0:[0]
+37,2,0,1,1766.6313,889577,13343559,106747869,8.0408,true,1,true,true,true,true,true,false,false,0:[0]
+41,3,0,1,3818.0148,1647380,24710678,197685264,25.6598,true,1,true,true,true,true,true,false,false,0:[0]
+43,2,1,1,4937.4726,2192545,32888099,263104325,51.6637,true,1,true,true,true,true,true,false,false,0:[0]
+47,5,1,1,10378.2339,3739396,56090906,448727073,61.1012,true,1,true,true,true,true,true,false,false,0:[0]
+53,2,0,1,21027.1824,7690481,115357129,922856489,1950.7404,true,1,true,true,true,true,true,false,false,0:[0]
+
