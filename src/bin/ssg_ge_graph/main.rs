@@ -8,7 +8,7 @@ use ssg_ge_graph::{check_ge_path_connectivity, compute_ssg_good_extension_graph}
 use std::{env, process};
 
 macro_rules! analyze_connectivity {
-    ($P:expr, $FNAME:expr) => {{
+    ($P:expr, $FNAME:expr, $ONLY_JACOBIANS:expr) => {{
         const D1: u32 = Fp::<$P>::find_non_residue();
         const D2: (u32, u32) = Fp2::<$P, D1>::find_non_residue();
         const D2C0: u32 = D2.0;
@@ -34,16 +34,16 @@ macro_rules! analyze_connectivity {
             d2c0: D2C0,
             d2c1: D2C1,
             construction_time_sec: format!("{:.4}", construction_time.as_secs_f64()),
-            jacobian_count: result.jacobian_count,
+            variety_count: result.variety_count,
             vertex_count: result.vertex_count,
             edge_count: result.edge_count,
             connectivity_check_time_sec: format!("{:.4}", check_time.as_secs_f64()),
             is_strongly_connected: result.is_strongly_connected,
             scc_count: result.scc_count,
-            are_all_jacobians_connected_via_main_scc: result
-                .are_all_jacobians_connected_via_main_scc,
-            are_all_jacobian_pairs_connected_via_good_paths: result
-                .are_all_jacobian_pairs_connected_via_good_paths,
+            are_all_varieties_covered_by_main_scc: result
+                .are_all_varieties_covered_by_main_scc,
+            are_all_variety_pairs_connected_via_good_paths: result
+                .are_all_variety_pairs_connected_via_good_paths,
             are_all_minor_sccs_size_1: result.are_all_minor_sccs_size_1,
             are_all_minor_nodes_self_isogenies: result.are_all_minor_nodes_self_isogenies,
             all_minor_sccs_have_preds_from_main: result.all_minor_sccs_have_preds_from_main,

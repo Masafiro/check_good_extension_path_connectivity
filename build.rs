@@ -19,7 +19,7 @@ fn main() {
         let p = num_str.trim();
         if !p.is_empty() {
             match_expr.push_str(&format!(
-                "    {} => analyze_connectivity!({}, filename_arg),\n",
+                "    {} => analyze_connectivity!({}, filename_arg, only_jacobians),\n",
                 p, p
             ));
         }
@@ -31,7 +31,6 @@ fn main() {
         std::process::exit(1); 
     }\n",
     );
-
     match_expr.push_str("}");
 
     let out_dir = env::var("OUT_DIR").unwrap();

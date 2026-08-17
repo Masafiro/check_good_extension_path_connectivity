@@ -155,7 +155,7 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
         jacobians_in_main_scc.insert(j1);
     }
 
-    let are_all_jacobians_connected_via_main_scc = jacobians_in_main_scc.len() == inv_to_id.len();
+    let are_all_varieties_covered_by_main_scc = jacobians_in_main_scc.len() == inv_to_id.len();
 
     // Minor SCCs
     let minor_sccs = &sccs[1..];
@@ -235,7 +235,7 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
         false
     };
 
-    let are_all_jacobian_pairs_connected_via_good_paths =
+    let are_all_variety_pairs_connected_via_good_paths =
         minor_sccs.iter().enumerate().all(|(i, comp)| {
             has_good_path_from_main_scc(i, comp) && has_good_path_to_main_scc(i, comp)
         });
@@ -293,13 +293,13 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
 
     (
         AnalysisResult {
-            jacobian_count: inv_to_id.len(),
+            variety_count: inv_to_id.len(),
             vertex_count: node_list.len(),
             edge_count: ge_graph.adj.iter().map(|vec| vec.len()).sum(),
             is_strongly_connected,
             scc_count,
-            are_all_jacobians_connected_via_main_scc,
-            are_all_jacobian_pairs_connected_via_good_paths,
+            are_all_varieties_covered_by_main_scc,
+            are_all_variety_pairs_connected_via_good_paths,
             are_all_minor_sccs_size_1,
             are_all_minor_nodes_self_isogenies,
             all_minor_sccs_have_preds_from_main,

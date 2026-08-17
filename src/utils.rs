@@ -63,13 +63,13 @@ pub fn intersect_sorted_vectors_inplace<T: Ord + Copy>(v1: &mut Vec<T>, v2: &[T]
 }
 
 pub struct AnalysisResult {
-    pub jacobian_count: usize,
+    pub variety_count: usize,
     pub vertex_count: usize,
     pub edge_count: usize,
     pub is_strongly_connected: bool,
     pub scc_count: usize,
-    pub are_all_jacobians_connected_via_main_scc: bool,
-    pub are_all_jacobian_pairs_connected_via_good_paths: bool,
+    pub are_all_varieties_covered_by_main_scc: bool,
+    pub are_all_variety_pairs_connected_via_good_paths: bool,
     pub are_all_minor_sccs_size_1: bool,
     pub are_all_minor_nodes_self_isogenies: bool,
     pub all_minor_sccs_have_preds_from_main: bool,
@@ -84,7 +84,7 @@ impl fmt::Display for AnalysisResult {
 
         writeln!(f, "\n--- Graph Connectivity Analysis Report ---")?;
         writeln!(f, "[Basic Statistics]")?;
-        writeln!(f, "Number of Jacobians:        {}", self.jacobian_count)?;
+        writeln!(f, "Number of Varieties:        {}", self.variety_count)?;
         writeln!(f, "Number of Vertices:         {}", self.vertex_count)?;
         writeln!(f, "Number of Edges:            {}", self.edge_count)?;
         writeln!(
@@ -98,14 +98,14 @@ impl fmt::Display for AnalysisResult {
         writeln!(
             f,
             "All Jacobians in Main SCC:   {}",
-            check(self.are_all_jacobians_connected_via_main_scc)
+            check(self.are_all_varieties_covered_by_main_scc)
         )?;
 
         writeln!(f, "\n[Jacobian Pair Connectivity]")?;
         writeln!(
             f,
             "All Jacobian Pairs Connected via Good Paths:    {}",
-            check(self.are_all_jacobian_pairs_connected_via_good_paths)
+            check(self.are_all_variety_pairs_connected_via_good_paths)
         )?;
 
         if !self.is_strongly_connected {
@@ -161,14 +161,14 @@ pub struct RowDataSsp {
     pub p: u32,
     pub d: u32,
     pub construction_time_sec: String,
-    pub jacobian_count: usize,
+    pub variety_count: usize,
     pub vertex_count: usize,
     pub edge_count: usize,
     pub connectivity_check_time_sec: String,
     pub is_strongly_connected: bool,
     pub scc_count: usize,
-    pub are_all_jacobians_connected_via_main_scc: bool,
-    pub are_all_jacobian_pairs_connected_via_good_paths: bool,
+    pub are_all_varieties_covered_by_main_scc: bool,
+    pub are_all_variety_pairs_connected_via_good_paths: bool,
     pub are_all_minor_sccs_size_1: bool,
     pub are_all_minor_nodes_self_isogenies: bool,
     pub all_minor_sccs_have_preds_from_main: bool,
@@ -186,14 +186,14 @@ pub struct RowDataSsg {
     pub d2c0: u32,
     pub d2c1: u32,
     pub construction_time_sec: String,
-    pub jacobian_count: usize,
+    pub variety_count: usize,
     pub vertex_count: usize,
     pub edge_count: usize,
     pub connectivity_check_time_sec: String,
     pub is_strongly_connected: bool,
     pub scc_count: usize,
-    pub are_all_jacobians_connected_via_main_scc: bool,
-    pub are_all_jacobian_pairs_connected_via_good_paths: bool,
+    pub are_all_varieties_covered_by_main_scc: bool,
+    pub are_all_variety_pairs_connected_via_good_paths: bool,
     pub are_all_minor_sccs_size_1: bool,
     pub are_all_minor_nodes_self_isogenies: bool,
     pub all_minor_sccs_have_preds_from_main: bool,

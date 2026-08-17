@@ -102,6 +102,42 @@ const G6: [[usize; 6]; 60] = [
     [3, 2, 4, 0, 1, 5],
 ];
 
+// Node invariant for a vertex in the isogeny graph: either the Igusa invariants of a Jacobian or the j-invariant pair of an elliptic product
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, DeepSizeOf)]
+pub enum Invariants<T: Field> {
+    Jacobian(IgusaInvariants<T>),
+    EllipticProduct(T, T),
+}
+
+impl<T: Field> Invariants<T> {
+    /// Determine if the invariant corresponds to a Jacobian of a genus 2 curve or a product of elliptic curves
+    pub fn is_jacobian(&self) -> bool {
+        matches!(self, Invariants::Jacobian(_))
+    }
+
+    /// Determine if the invariant corresponds to a product of elliptic curves
+    pub fn is_elliptic_product(&self) -> bool {
+        matches!(self, Invariants::EllipticProduct(_, _))
+    }
+
+    /// if the invariant corresponds to a Jacobian, extract the Igusa invariants (otherwise return None)
+    pub fn as_jacobian(&self) -> Option<IgusaInvariants<T>> {
+        match self {
+            Invariants::Jacobian(igusa) => Some(*igusa),
+            _ => None,
+        }
+    }
+
+    /// if the invariant corresponds to a product of elliptic curves, extract the j-invariants (otherwise return None)
+    pub fn as_elliptic_product(&self) -> Option<(T, T)> {
+        match self {
+            Invariants::EllipticProduct(j1, j2) => Some((*j1, *j2)),
+            _ => None,
+        }
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, DeepSizeOf)]
 pub struct IgusaInvariants<T: Field> {
     pub i1: T,
@@ -204,7 +240,7 @@ impl<T: Field> Rosenhain<T> {
     }
 }
 
-impl<const P: u32, const D: u32> Legendre<P, D> {
+impl<const P: u32, const D: u32> Legendre<Fp2<P, D>> {
     pub fn is_supersingular(&self) -> bool {
         let m = (P - 1) / 2;
         let mut binom = Fp::<P>::ONE;
@@ -220,12 +256,12 @@ impl<const P: u32, const D: u32> Legendre<P, D> {
     }
 
     /// Generate a supersingular elliptic curve over Fp^2
-    pub fn generate_ssg_legendre() -> Legendre<P, D> {
+    pub fn generate_ssg_legendre() -> Legendre<Fp2<P, D>> {
         assert!(P > 5, "Prime P must be greater than 5");
 
         if P % 4 == 3 {
             let la = Fp2::<P, D>::new(Fp::from(P - 1), Fp::ZERO);
-            return Legendre::<P, D>::new(la);
+            return Legendre::<Fp2<P, D>>::new(la);
         }
 
         for c0 in 0..P {
@@ -234,7 +270,7 @@ impl<const P: u32, const D: u32> Legendre<P, D> {
                 if la.is_zero() || la == Fp2::<P, D>::ONE {
                     continue;
                 }
-                let e = Legendre::<P, D>::new(la);
+                let e = Legendre::<Fp2<P, D>>::new(la);
                 if e.is_supersingular() {
                     return e;
                 }
@@ -317,36 +353,91 @@ impl<const P: u32, const D1: u32, const D2C0: u32, const D2C1: u32>
 }
 
 /// A Legendre form of an elliptic curve: y^2 = x (x - 1) (x - λ)
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Legendre<const P: u32, const D: u32> {
-    pub la: Fp2<P, D>,
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, DeepSizeOf)]
+pub struct Legendre<T: Field> {
+    pub la: T,
 }
 
-impl<const P: u32, const D: u32> Legendre<P, D> {
-    pub fn new(la: Fp2<P, D>) -> Self {
+impl<T: Field> Legendre<T> {
+    pub fn new(la: T) -> Self {
         Self { la }
     }
 
-    pub fn j_invariant(&self) -> Fp2<P, D> {
+    pub fn j_invariant(&self) -> T {
         let la = self.la;
-        let one = Fp2::<P, D>::ONE;
-        (256 * (la * la - la + one).pow(3)) / (la * la * (la - one) * (la - one))
+        let one = T::ONE;
+        (T::from(256u32) * (la * la - la + one).pow(3)) / (la * la * (la - one) * (la - one))
     }
 }
 
 /// Two legendre forms of elliptic curves.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LegendreProduct<const P: u32, const D: u32> {
-    pub e1: Legendre<P, D>,
-    pub e2: Legendre<P, D>,
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, DeepSizeOf)]
+pub struct LegendreProduct<T: Field> {
+    pub e1: Legendre<T>,
+    pub e2: Legendre<T>,
 }
 
-impl<const P: u32, const D: u32> LegendreProduct<P, D> {
-    pub fn new(e1: Legendre<P, D>, e2: Legendre<P, D>) -> Self {
+/// A curve object represented either by a genus-2 Rosenhain form or by a product of elliptic curves.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, DeepSizeOf)]
+pub enum Curve<T: Field> {
+    Jacobian(Rosenhain<T>),
+    EllipticProduct(LegendreProduct<T>),
+}
+
+impl<T: Field> Curve<T> {
+    pub fn is_jacobian(&self) -> bool {
+        matches!(self, Curve::Jacobian(_))
+    }
+
+    pub fn is_elliptic_product(&self) -> bool {
+        matches!(self, Curve::EllipticProduct(_))
+    }
+
+    pub fn as_jacobian(&self) -> Option<Rosenhain<T>> {
+        match self {
+            Curve::Jacobian(ram) => Some(*ram),
+            _ => None,
+        }
+    }
+
+    pub fn as_elliptic_product(&self) -> Option<LegendreProduct<T>> {
+        match self {
+            Curve::EllipticProduct(lp) => Some(*lp),
+            _ => None,
+        }
+    }
+}
+
+impl<T: Field> Curve<T> {
+    pub fn invariants(&self) -> Invariants<T> {
+        match self {
+            Curve::Jacobian(ram) => Invariants::Jacobian(ram.igusa_invariants()),
+            Curve::EllipticProduct(lp) => {
+                let (j1, j2) = lp.j_invariants();
+                Invariants::EllipticProduct(j1, j2)
+            }
+        }
+    }
+}
+
+impl<T: Field> From<Rosenhain<T>> for Curve<T> {
+    fn from(value: Rosenhain<T>) -> Self {
+        Curve::Jacobian(value)
+    }
+}
+
+impl<T: Field> From<LegendreProduct<T>> for Curve<T> {
+    fn from(value: LegendreProduct<T>) -> Self {
+        Curve::EllipticProduct(value)
+    }
+}
+
+impl<T: Field> LegendreProduct<T> {
+    pub fn new(e1: Legendre<T>, e2: Legendre<T>) -> Self {
         Self { e1, e2 }
     }
 
-    pub fn j_invariants(&self) -> (Fp2<P, D>, Fp2<P, D>) {
+    pub fn j_invariants(&self) -> (T, T) {
         let j1 = self.e1.j_invariant();
         let j2 = self.e2.j_invariant();
         (min(j1, j2), max(j1, j2))

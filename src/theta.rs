@@ -1,5 +1,5 @@
 //! theta function representation and isogeny computations
-use crate::curves::{Legendre, LegendreProduct, Rosenhain};
+use crate::curves::{Curve, Legendre, LegendreProduct, Rosenhain};
 use crate::fq::{ExtensionField, Field, Fp2, Fp4};
 use deepsize::DeepSizeOf;
 
@@ -161,8 +161,39 @@ impl<const P: u32, const D: u32> Theta<Fp2<P, D>> {
         self.null.iter().position(|&x| x == Fp2::<P, D>::ZERO)
     }
 
+    /// Construct the theta structure from a pair of Legendre invariants.
+    pub fn from_legendre_product(lp: &LegendreProduct<Fp2<P, D>>) -> Self {
+        let la1 = lp.e1.la;
+        let la2 = lp.e2.la;
+
+        let mut null = [Fp2::<P, D>::ZERO; 10];
+        let a1 = la1.sqrt().unwrap();
+        let a2 = (Fp2::<P, D>::ONE - la1).sqrt().unwrap();
+        let b1 = la2.sqrt().unwrap();
+        let b2 = (Fp2::<P, D>::ONE - la2).sqrt().unwrap();
+        null[0] = Fp2::<P, D>::ONE;
+        null[1] = a1;
+        null[2] = b1;
+        null[3] = a1 * b1;
+        null[4] = a2;
+        null[5] = a2 * b1;
+        null[6] = b2;
+        null[7] = a1 * b2;
+        null[8] = a2 * b2;
+
+        Self { null }
+    }
+
+        /// Construct the theta structure from a curve representation.
+    pub fn from_curve(curve: &Curve<Fp2<P, D>>) -> Self {
+        match curve {
+            Curve::Jacobian(ram) => Self::from_rosenhain(ram),
+            Curve::EllipticProduct(lp) => Self::from_legendre_product(lp),
+        }
+    }
+
     /// Recover a pair of Legendre invariants from a squared theta null-point.
-    pub fn to_legendre_product(&self) -> LegendreProduct<P, D> {
+    pub fn to_legendre_product(&self) -> LegendreProduct<Fp2<P, D>> {
         let clue = self
             .find_split_index()
             .expect("Theta null-point has no zero entries");
@@ -188,6 +219,15 @@ impl<const P: u32, const D: u32> Theta<Fp2<P, D>> {
         LegendreProduct {
             e1: Legendre::new(la1),
             e2: Legendre::new(la2),
+        }
+    }
+
+    /// Recover either a genus-2 curve or an elliptic product from a squared theta null-point.
+    pub fn to_curve(&self) -> Curve<Fp2<P, D>> {
+        if self.find_split_index().is_some() {
+            Curve::from(self.to_legendre_product())
+        } else {
+            Curve::from(self.to_rosenhain())
         }
     }
 
@@ -260,7 +300,7 @@ impl<const P: u32, const D: u32> Theta<Fp2<P, D>> {
 
     /// Generate a superspecial genus-2 curves null-point.
     pub fn generate_ssp_theta() -> Self {
-        let e = Legendre::<P, D>::generate_ssg_legendre();
+        let e = Legendre::<Fp2<P, D>>::generate_ssg_legendre();
         let la = e.la;
 
         let mut null = [Fp2::<P, D>::ZERO; 10];

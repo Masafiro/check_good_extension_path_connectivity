@@ -1,8 +1,8 @@
 //! Compute the superspecial (2,2)-good extension graph and analyze its connectivity
 
 use deepsize::DeepSizeOf;
-use g2_isogeny::counting::number_of_ssp_jacobian_nodes;
-use g2_isogeny::curves::{IgusaInvariants, Rosenhain};
+use g2_isogeny::counting::{number_of_ssp_jacobian_nodes, number_of_ssp_nodes};
+use g2_isogeny::curves::{Curve, Invariants};
 use g2_isogeny::fq::Fp2;
 use g2_isogeny::graph::DirectedGraph;
 use g2_isogeny::theta::Theta;
@@ -11,9 +11,9 @@ use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time;
 
-pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
-    HashMap<IgusaInvariants<Fp2<P, D>>, usize>,
-    Vec<Rosenhain<Fp2<P, D>>>,
+pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>(only_jacobians: bool) -> (
+    HashMap<Invariants<Fp2<P, D>>, usize>,
+    Vec<Curve<Fp2<P, D>>>,
     Vec<(usize, usize)>,
     DirectedGraph,
     time::Duration,
@@ -21,31 +21,35 @@ pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
 ) {
     assert!(P > 5, "P must be greater than 5");
 
-    let num_j = number_of_ssp_jacobian_nodes(P) as usize;
+    let num_of_nodes = if only_jacobians {
+        number_of_ssp_jacobian_nodes(P) as usize
+    } else {
+        number_of_ssp_nodes(P) as usize
+    };
 
     let initial_theta = Theta::<Fp2<P, D>>::generate_ssp_theta();
-    let initial_ram = initial_theta.to_rosenhain();
-    let initial_inv = initial_ram.igusa_invariants();
+    let initial_curve = initial_theta.to_curve();
+    let initial_inv = initial_curve.invariants();
 
     let time_start = time::Instant::now();
 
-    let mut inv_to_id = HashMap::<IgusaInvariants<Fp2<P, D>>, usize>::with_capacity(num_j);
-    let mut ram_list = Vec::<Rosenhain<Fp2<P, D>>>::with_capacity(num_j);
-    let mut edge_info = HashMap::<(usize, usize), Vec<usize>>::with_capacity(15 * num_j);
+    let mut inv_to_id = HashMap::<Invariants<Fp2<P, D>>, usize>::with_capacity(num_of_nodes);
+    let mut curve_list = Vec::<Curve<Fp2<P, D>>>::with_capacity(num_of_nodes);
+    let mut edge_info = HashMap::<(usize, usize), Vec<usize>>::with_capacity(15 * num_of_nodes);
     let mut dq = VecDeque::<(Theta<Fp2<P, D>>, usize)>::new();
 
     inv_to_id.insert(initial_inv, 0);
-    ram_list.push(initial_ram);
+    curve_list.push(initial_curve);
     dq.push_back((initial_theta, 0));
 
     while let Some((prev, prev_id)) = dq.pop_front() {
         // Not necessarily good extension
-        for curr in prev.compute_all_twoisogenies(true, false) {
-            let curr_ram = curr.to_rosenhain();
-            let curr_inv = curr_ram.igusa_invariants();
+        for curr in prev.compute_all_twoisogenies(only_jacobians, false) {
+            let curr_curve = curr.to_curve();
+            let curr_inv = curr_curve.invariants();
             let curr_id = *inv_to_id.entry(curr_inv).or_insert_with(|| {
-                let id = ram_list.len();
-                ram_list.push(curr_ram);
+                let id = curve_list.len();
+                curve_list.push(curr_curve);
                 dq.push_back((curr, id));
                 id
             });
@@ -54,12 +58,12 @@ pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
             let mut next_set = Vec::<usize>::with_capacity(8);
 
             // Good extension
-            for next in curr.compute_all_twoisogenies(true, true) {
-                let next_ram = next.to_rosenhain();
-                let next_inv = next_ram.igusa_invariants();
+            for next in curr.compute_all_twoisogenies(only_jacobians, true) {
+                let next_curve = next.to_curve();
+                let next_inv = next_curve.invariants();
                 let next_id = *inv_to_id.entry(next_inv).or_insert_with(|| {
-                    let id = ram_list.len();
-                    ram_list.push(next_ram);
+                    let id = curve_list.len();
+                    curve_list.push(next_curve);
                     dq.push_back((next, id));
                     id
                 });
@@ -87,7 +91,7 @@ pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
 
     let peak_memory_bytes = dq.deep_size_of()
         + inv_to_id.deep_size_of()
-        + ram_list.deep_size_of()
+        + curve_list.deep_size_of()
         + node_list.deep_size_of()
         + edge_info.deep_size_of();
 
@@ -106,15 +110,15 @@ pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
     let duration = time_start.elapsed();
 
     assert!(
-        inv_to_id.len() == num_j,
+        inv_to_id.len() == num_of_nodes,
         "Number of nodes mismatch: computed {}, expected {}",
         inv_to_id.len(),
-        num_j
+        num_of_nodes
     );
 
     (
         inv_to_id,
-        ram_list,
+        curve_list,
         node_list,
         ge_graph,
         duration,
@@ -123,10 +127,11 @@ pub fn compute_ssp_good_extension_graph<const P: u32, const D: u32>() -> (
 }
 
 pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
-    inv_to_id: &HashMap<IgusaInvariants<Fp2<P, D>>, usize>,
-    ram_list: &Vec<Rosenhain<Fp2<P, D>>>,
+    inv_to_id: &HashMap<Invariants<Fp2<P, D>>, usize>,
+    curve_list: &Vec<Curve<Fp2<P, D>>>,
     node_list: &Vec<(usize, usize)>,
     ge_graph: &DirectedGraph,
+    only_jacobians: bool,
 ) -> (AnalysisResult, time::Duration, usize) {
     let time_start = time::Instant::now();
 
@@ -134,14 +139,21 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
 
     let peak_memory_bytes = scc_memory_bytes
         + inv_to_id.deep_size_of()
-        + ram_list.deep_size_of()
+        + curve_list.deep_size_of()
         + node_list.deep_size_of()
         + ge_graph.deep_size_of();
 
     let scc_count = sccs.len();
     let is_strongly_connected = scc_count == 1;
 
-    let main_scc: &Vec<usize> = &sccs[0];
+    let main_scc_idx = sccs
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, component)| component
+        .len())
+        .map(|(idx, _)| idx)
+        .expect("No SCC found");
+    let main_scc: &Vec<usize> = &sccs[main_scc_idx];
     let mut jacobians_in_main_scc = HashSet::with_capacity(inv_to_id.len());
     for &node_idx in main_scc {
         let (j0, j1) = node_list[node_idx];
@@ -149,10 +161,10 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
         jacobians_in_main_scc.insert(j1);
     }
 
-    let are_all_jacobians_connected_via_main_scc = jacobians_in_main_scc.len() == inv_to_id.len();
+    let are_all_varieties_covered_by_main_scc = jacobians_in_main_scc.len() == inv_to_id.len();
 
     // Minor SCCs
-    let minor_sccs = &sccs[1..];
+    let minor_sccs: Vec<(usize, &Vec<usize>)> = sccs.iter().enumerate().filter(|(idx, _)| *idx != main_scc_idx).collect();
 
     let mut is_in_main = vec![false; ge_graph.n];
     for &idx in main_scc {
@@ -161,33 +173,33 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
 
     let has_good_path_from_main_scc = |i: usize, comp: &Vec<usize>| -> bool {
         // (A) グラフ内に既に辺がある場合
-        if condensed_graph.adj[0].contains(&i) {
+        if condensed_graph.adj[main_scc_idx].contains(&i) {
             return true;
         }
 
         for &node_idx in comp {
             // (B) グラフ外の探索: prev -> j0 -> j1 (node(prev, j0) が main_scc にあるか)
             let (j0_id, j1_id) = node_list[node_idx];
-            let j0 = Theta::from_rosenhain(&ram_list[j0_id]);
+            let j0: Theta<Fp2<P, D>> = Theta::from_curve(&curve_list[j0_id]);
 
             // j0 から戻る 2-isogeny (not necessarily good)
-            for prev in j0.compute_all_twoisogenies(true, false) {
-                let prev_inv = prev.to_rosenhain().igusa_invariants();
+            for prev in j0.compute_all_twoisogenies(only_jacobians, false) {
+                let prev_inv = prev.to_curve().invariants();
                 let prev_id = inv_to_id[&prev_inv];
                 // node(prev, j0) がメインSCCに存在するかチェック
                 if !is_in_main[node_list.binary_search(&(prev_id, j0_id)).unwrap()] {
                     continue;
                 }
 
-                for curr in prev.compute_all_twoisogenies(true, false) {
-                    let curr_inv = curr.to_rosenhain().igusa_invariants();
+                for curr in prev.compute_all_twoisogenies(only_jacobians, false) {
+                    let curr_inv = curr.to_curve().invariants();
                     let curr_id = inv_to_id[&curr_inv];
                     if curr_id != j0_id {
                         continue;
                     }
 
-                    for next in curr.compute_all_twoisogenies(true, true) {
-                        let next_inv = next.to_rosenhain().igusa_invariants();
+                    for next in curr.compute_all_twoisogenies(only_jacobians, true) {
+                        let next_inv = next.to_curve().invariants();
                         let next_id = inv_to_id[&next_inv];
                         if next_id == j1_id {
                             return true;
@@ -201,24 +213,24 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
 
     let has_good_path_to_main_scc = |i: usize, comp: &Vec<usize>| -> bool {
         // (A) グラフ内に既に辺がある場合
-        if condensed_graph.adj[i].contains(&0) {
+        if condensed_graph.adj[i].contains(&main_scc_idx) {
             return true;
         }
 
         for &node_idx in comp {
             // (B) グラフ外の探索: j0 -> j1 -> next
             let (j0_id, j1_id) = node_list[node_idx];
-            let j0 = Theta::from_rosenhain(&ram_list[j0_id]);
+            let j0: Theta<Fp2<P, D>> = Theta::from_curve(&curve_list[j0_id]);
 
-            for curr in j0.compute_all_twoisogenies(true, false) {
-                let curr_inv = curr.to_rosenhain().igusa_invariants();
+            for curr in j0.compute_all_twoisogenies(only_jacobians, false) {
+                let curr_inv = curr.to_curve().invariants();
                 let curr_id = inv_to_id[&curr_inv];
                 if curr_id != j1_id {
                     continue;
                 }
 
-                for next in curr.compute_all_twoisogenies(true, true) {
-                    let next_inv = next.to_rosenhain().igusa_invariants();
+                for next in curr.compute_all_twoisogenies(only_jacobians, true) {
+                    let next_inv = next.to_curve().invariants();
                     let next_id = inv_to_id[&next_inv];
                     if is_in_main[node_list.binary_search(&(j1_id, next_id)).unwrap()] {
                         return true;
@@ -229,19 +241,24 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
         false
     };
 
-    let are_all_jacobian_pairs_connected_via_good_paths =
-        minor_sccs.iter().enumerate().all(|(i, comp)| {
-            has_good_path_from_main_scc(i, comp) && has_good_path_to_main_scc(i, comp)
+    let are_all_variety_pairs_connected_via_good_paths =
+        minor_sccs.iter().all(|(i, comp)| {
+            has_good_path_from_main_scc(*i, *comp) && has_good_path_to_main_scc(*i, *comp)
         });
 
     let is_size_1 = |comp: &Vec<usize>| comp.len() == 1;
-    let are_all_minor_sccs_size_1 = minor_sccs.iter().all(|comp| is_size_1(comp));
+    let are_all_minor_sccs_size_1 = minor_sccs.iter().all(|(_, comp)| is_size_1(*comp));
     if !are_all_minor_sccs_size_1 {
         let anomalous_sizes: Vec<usize> = minor_sccs
             .iter()
-            .filter(|comp| !is_size_1(comp))
-            .map(|comp| comp.len())
-            .collect();
+            .filter_map(|(_, comp)| {
+            if is_size_1(*comp) {
+                None
+            } else {
+                Some(comp.len())
+            }
+        })
+        .collect();
         println!("Anomaly minor SCC sizes: {:?}", anomalous_sizes);
     }
 
@@ -251,49 +268,49 @@ pub fn check_ge_path_connectivity<const P: u32, const D: u32>(
     };
     let are_all_minor_nodes_self_isogenies = minor_sccs
         .iter()
-        .flatten()
-        .all(|&node_idx| is_self_isogeny(node_idx));
+        .flat_map(|(_, comp)| comp.iter().copied())
+        .all(is_self_isogeny);
     if !are_all_minor_nodes_self_isogenies {
         let anomalies: Vec<(usize, (usize, usize))> = minor_sccs
             .iter()
-            .flatten()
-            .copied()
+            .flat_map(|(_, comp)| comp.iter().copied())
             .filter(|&node_idx| !is_self_isogeny(node_idx))
             .map(|node_idx| (node_idx, node_list[node_idx]))
             .collect();
         println!("Anomaly minor nodes (node_idx, (j0, j1)): {:?}", anomalies);
     }
 
-    let all_minor_sccs_have_preds_from_main = condensed_graph
-        .adj
+    let all_minor_sccs_have_preds_from_main = minor_sccs
         .iter()
-        .enumerate()
-        .skip(1)
-        .all(|(i, _)| condensed_graph.adj[0].contains(&i));
+        .all(|(minor_idx, _)| {
+            condensed_graph.adj[main_scc_idx].contains(minor_idx)
+        });
 
-    let any_minor_sccs_have_succs_to_main = condensed_graph
-        .adj
+    let any_minor_sccs_have_succs_to_main = minor_sccs
         .iter()
-        .skip(1)
-        .any(|minor_adj| minor_adj.contains(&0));
+        .any(|(minor_idx, _)| {
+            condensed_graph.adj[*minor_idx].contains(&main_scc_idx)
+        });
 
-    let exists_minor_to_minor_edge = condensed_graph
-        .adj
+    let exists_minor_to_minor_edge = minor_sccs
         .iter()
-        .skip(1)
-        .any(|minor_adj| minor_adj.iter().any(|&p| p != 0));
+        .any(|(minor_idx, _)| {
+            condensed_graph.adj[*minor_idx]
+                .iter()
+                .any(|&target_idx| target_idx != main_scc_idx)
+        });
 
     let duration = time_start.elapsed();
 
     (
         AnalysisResult {
-            jacobian_count: inv_to_id.len(),
+            variety_count: inv_to_id.len(),
             vertex_count: node_list.len(),
             edge_count: ge_graph.adj.iter().map(|vec| vec.len()).sum(),
             is_strongly_connected,
             scc_count,
-            are_all_jacobians_connected_via_main_scc,
-            are_all_jacobian_pairs_connected_via_good_paths,
+            are_all_varieties_covered_by_main_scc,
+            are_all_variety_pairs_connected_via_good_paths,
             are_all_minor_sccs_size_1,
             are_all_minor_nodes_self_isogenies,
             all_minor_sccs_have_preds_from_main,

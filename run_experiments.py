@@ -7,18 +7,29 @@ from datetime import datetime
 
 # --- Configuration --------------------------------------
 # Select mode: "ssp" for superspecial, "ssg" for supersingular non-superspecial
-MODE = "ssp"  # Super Special
-# MODE = "ssg"  # Super Singular
+# MODE = "ssp_only_jacobians"  # Superspecial (vertices are Jacobians only)
+MODE = "ssp_all"  # Superspecial (vertices are Jacobians + elliptic curves products)
+# MODE = "ssg"  # Supersingular
 
 PRIME_MIN = 7  # Starting prime (inclusive)
-PRIME_MAX = 100  # Ending prime (inclusive)
+PRIME_MAX = 20  # Ending prime (inclusive)
 
 MAX_WORKERS = 1  # Number of parallel workers
 
 
 # --- Do not modify below this line unless necessary ----
 PRIMES_FILE = "primes.txt"  # File containing the list of primes
-BINARY_NAME = f"{MODE}_ge_graph"  # Name of the compiled binary
+
+if MODE == "ssp_only_jacobians":
+    only_jacobians = "true"
+    BINARY_NAME = "ssp_ge_graph"
+elif MODE == "ssp_all":
+    only_jacobians = "false"
+    BINARY_NAME = "ssp_ge_graph"
+else:
+    only_jacobians = "false"
+    BINARY_NAME = f"ssg_ge_graph"
+
 BINARY_PATH = f"./target/release/{BINARY_NAME}"  # Path to the compiled binary
 OUTPUT_FILE = f"data/{MODE}_results.csv"
 
@@ -79,7 +90,7 @@ def run_experiment(p):
     start_time = time.time()
 
     try:
-        cmd = [BINARY_PATH, str(p), OUTPUT_FILE]
+        cmd = [BINARY_PATH, str(p), OUTPUT_FILE, only_jacobians]
 
         subprocess.run(cmd, check=True)
 

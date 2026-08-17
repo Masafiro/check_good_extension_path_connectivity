@@ -1,0 +1,3 @@
+p,d,construction_time_sec,reachability_check_time_sec,variety_count,coarse_pair_count,marked_edge_state_count,marked_transition_count,marked_scc_count,all_marked_edges_mutually_reachable,all_coarse_pairs_connected_via_good_paths,first_unreachable_source_pair,first_unreachable_target_pair,construction_peak_bytes,reachability_check_peak_bytes
+17,3,0.5420,0.0338,8,36,17031,133876,5,false,true,,,8136096,6379610
+23,5,1.7164,0.1955,16,92,36792,290714,11,false,true,,,16446704,12994312
