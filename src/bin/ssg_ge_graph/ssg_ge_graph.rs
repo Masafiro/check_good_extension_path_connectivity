@@ -147,7 +147,14 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
     let scc_count = sccs.len();
     let is_strongly_connected = scc_count == 1;
 
-    let main_scc: &Vec<usize> = &sccs[0];
+    let main_scc_idx = sccs
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, component)| component
+        .len())
+        .map(|(idx, _)| idx)
+        .expect("No SCC found");
+    let main_scc: &Vec<usize> = &sccs[main_scc_idx];
     let mut jacobians_in_main_scc = HashSet::with_capacity(inv_to_id.len());
     for &node_idx in main_scc {
         let (j0, j1) = node_list[node_idx];
@@ -158,7 +165,7 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
     let are_all_varieties_covered_by_main_scc = jacobians_in_main_scc.len() == inv_to_id.len();
 
     // Minor SCCs
-    let minor_sccs = &sccs[1..];
+    let minor_sccs: Vec<(usize, &Vec<usize>)> = sccs.iter().enumerate().filter(|(idx, _)| *idx != main_scc_idx).collect();
 
     let mut is_in_main = vec![false; ge_graph.n];
     for &idx in main_scc {
@@ -167,7 +174,7 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
 
     let has_good_path_from_main_scc = |i: usize, comp: &Vec<usize>| -> bool {
         // (A) グラフ内に既に辺がある場合
-        if condensed_graph.adj[0].contains(&i) {
+        if condensed_graph.adj[main_scc_idx].contains(&i) {
             return true;
         }
 
@@ -207,7 +214,7 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
 
     let has_good_path_to_main_scc = |i: usize, comp: &Vec<usize>| -> bool {
         // (A) グラフ内に既に辺がある場合
-        if condensed_graph.adj[i].contains(&0) {
+        if condensed_graph.adj[i].contains(&main_scc_idx) {
             return true;
         }
 
@@ -236,20 +243,26 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
     };
 
     let are_all_variety_pairs_connected_via_good_paths =
-        minor_sccs.iter().enumerate().all(|(i, comp)| {
-            has_good_path_from_main_scc(i, comp) && has_good_path_to_main_scc(i, comp)
+        minor_sccs.iter().all(|(i, comp)| {
+            has_good_path_from_main_scc(*i, *comp) && has_good_path_to_main_scc(*i, *comp)
         });
 
     let is_size_1 = |comp: &Vec<usize>| comp.len() == 1;
-    let are_all_minor_sccs_size_1 = minor_sccs.iter().all(|comp| is_size_1(comp));
+    let are_all_minor_sccs_size_1 = minor_sccs.iter().all(|(_, comp)| is_size_1(*comp));
     if !are_all_minor_sccs_size_1 {
         let anomalous_sizes: Vec<usize> = minor_sccs
             .iter()
-            .filter(|comp| !is_size_1(comp))
-            .map(|comp| comp.len())
-            .collect();
+            .filter_map(|(_, comp)| {
+            if is_size_1(*comp) {
+                None
+            } else {
+                Some(comp.len())
+            }
+        })
+        .collect();
         println!("Anomaly minor SCC sizes: {:?}", anomalous_sizes);
     }
+
 
     let is_self_isogeny = |node_idx: usize| {
         let (j0, j1) = node_list[node_idx];
@@ -257,37 +270,37 @@ pub fn check_ge_path_connectivity<const P: u32, const D1: u32, const D2C0: u32, 
     };
     let are_all_minor_nodes_self_isogenies = minor_sccs
         .iter()
-        .flatten()
-        .all(|&node_idx| is_self_isogeny(node_idx));
+        .flat_map(|(_, comp)| comp.iter().copied())
+        .all(is_self_isogeny);
     if !are_all_minor_nodes_self_isogenies {
         let anomalies: Vec<(usize, (usize, usize))> = minor_sccs
             .iter()
-            .flatten()
-            .copied()
+            .flat_map(|(_, comp)| comp.iter().copied())
             .filter(|&node_idx| !is_self_isogeny(node_idx))
             .map(|node_idx| (node_idx, node_list[node_idx]))
             .collect();
         println!("Anomaly minor nodes (node_idx, (j0, j1)): {:?}", anomalies);
     }
 
-    let all_minor_sccs_have_preds_from_main = condensed_graph
-        .adj
+    let all_minor_sccs_have_preds_from_main = minor_sccs
         .iter()
-        .enumerate()
-        .skip(1)
-        .all(|(i, _)| condensed_graph.adj[0].contains(&i));
+        .all(|(minor_idx, _)| {
+            condensed_graph.adj[main_scc_idx].contains(minor_idx)
+        });
 
-    let any_minor_sccs_have_succs_to_main = condensed_graph
-        .adj
+    let any_minor_sccs_have_succs_to_main = minor_sccs
         .iter()
-        .skip(1)
-        .any(|minor_adj| minor_adj.contains(&0));
+        .any(|(minor_idx, _)| {
+            condensed_graph.adj[*minor_idx].contains(&main_scc_idx)
+        });
 
-    let exists_minor_to_minor_edge = condensed_graph
-        .adj
+    let exists_minor_to_minor_edge = minor_sccs
         .iter()
-        .skip(1)
-        .any(|minor_adj| minor_adj.iter().any(|&p| p != 0));
+        .any(|(minor_idx, _)| {
+            condensed_graph.adj[*minor_idx]
+                .iter()
+                .any(|&target_idx| target_idx != main_scc_idx)
+        });
 
     let duration = time_start.elapsed();
 
